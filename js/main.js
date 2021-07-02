@@ -1,97 +1,91 @@
-var taskList = new TaskList();
-var validation = new Validation();
-
-getLocalStorage();
-/**
- * Add Task
- */
-getEle("addItem").addEventListener("click", function () {
-  var newTask = getEle("newTask").value;
-
-  var isValid = true;
-  isValid &= validation.checkEmty(
-    newTask,
-    "notiInput",
-    "(*) Vui lòng nhập thông tin"
-  );
-
-  if (!isValid) return;
-
-  var id = Math.random();
-  var task = new Task(id, newTask, "todo");
-  taskList.addTask(task);
-  createTable(taskList.arr);
-  setLocalStorage();
-});
-
-/**
- * Delete Task
- */
-function deleteTask(id) {
-  taskList.deleteTask(id);
-  createTable(taskList.arr);
-  setLocalStorage();
-}
-
-/**
- * Change Status
- */
-function changeStatus(id) {
-  var task = taskList.getTaskById(id);
-  task.status = task.status === "todo" ? "completed" : "todo";
-  taskList.updateTask(task);
-  createTable(taskList.arr);
-  setLocalStorage();
-}
-
-function createTable(arr) {
-  var contentTodo = "";
-  var contentCompleted = "";
-  getEle("todo").innerHTML = "";
-  getEle("completed").innerHTML = "";
-  arr.forEach(function (item, index) {
-    if (item.status === "todo") {
-      contentTodo += renderListLiHtml(item);
-      getEle("todo").innerHTML = contentTodo;
-    } else if (item.status === "completed") {
-      contentCompleted += renderListLiHtml(item);
-      getEle("completed").innerHTML = contentCompleted;
+var dstask = new ListTask();
+var validator = new Validator();
+var getEle = function (id) {
+  return document.getElementById(id);
+};
+var renderDSTask = function (dstask) {
+  var todo = "";
+  var completed = "";
+  dstask.forEach((task, index) => {
+    if (task.status == "todo") {
+      todo += `<li>
+        <span>${task.name}</span>
+        <div class="buttons">
+          <button class="remove" onclick="deleteToDo(${index})">
+            <i class="fa fa-trash-alt"></i>
+          </button>
+          <button class="complete" onclick="changeStatus(${index})">
+            <i class="far fa-check-circle"></i>
+            <i class="fas fa-check-circle"></i>
+          </button>
+        </div>
+      </li>`;
+    } else {
+      completed += `<li>
+        <span>${task.name}</span>
+        <div class="buttons">
+          <button class="remove" onclick="deleteToDo(${index})">
+            <i class="fa fa-trash-alt"></i>
+          </button>
+          <button class="complete" onclick="changeStatus(${index})">
+            <i class="far fa-check-circle"></i>
+            <i class="fas fa-check-circle"></i>
+          </button>
+        </div>
+      </li>`;
     }
   });
+  getEle("todo").innerHTML = todo;
+  getEle("completed").innerHTML = completed;
+};
+
+getLocalStorage();
+
+function deleteToDo(index) {
+  dstask.deleteTask(index);
+  alert("Delete Success!");
+  renderDSTask(dstask.arr);
+  setLocalStorage();
 }
 
-function renderListLiHtml(item) {
-  return `<li>
-      <span>${item.taskName}</span>
-      <div class="buttons">
-        <button
-          class="remove"
-          onclick="deleteTask(${item.id})"
-        >
-          <i class="fa fa-trash-alt"></i>
-        </button>
-        <button
-          class="complete"
-          onclick="changeStatus(${item.id})"
-        >
-          <i class="far fa-check-circle"></i>
-          <i class="fas fa-check-circle"></i>
-        </button>
-      </div>
-    </li>`;
+function changeStatus(index) {
+  if (dstask.arr[index].status == "todo") {
+    dstask.arr[index].status = "completed";
+  } else {
+    dstask.arr[index].status = "completed";
+  }
+  alert("Change status success!");
+  renderDSTask(dstask.arr);
 }
 
-function setLocalStorage() {
-  localStorage.setItem("TaskList", JSON.stringify(taskList.arr));
-}
+getEle("addItem").addEventListener("click", function () {
+  var nameTask = getEle("newTask").value;
+  var isValid = true;
+  isValid &=
+    validator.checkEmpty(nameTask, "notiInput", "Task name cannot be empty!") &&
+    validator.checkSame(
+      nameTask,
+      dstask.arr,
+      "notiInput",
+      "Task name cannot be same!"
+    );
+  console.log(isValid);
+  if (!isValid) return;
+  var task = new Task(nameTask, "todo");
+  dstask.addTask(task);
+  setLocalStorage();
+  alert("add success!");
+  getEle("newTask").value = "";
+  renderDSTask(dstask.arr);
+});
 
 function getLocalStorage() {
-  if (localStorage.getItem("TaskList")) {
-    taskList.arr = JSON.parse(localStorage.getItem("TaskList"));
-    createTable(taskList.arr);
+  if (localStorage.getItem("DSTask")) {
+    dstask.arr = JSON.parse(localStorage.getItem("DSTask"));
+    renderDSTask(dstask.arr);
   }
 }
 
-function getEle(id) {
-  return document.getElementById(id);
+function setLocalStorage() {
+  localStorage.setItem("DSTask", JSON.stringify(dstask.arr));
 }
