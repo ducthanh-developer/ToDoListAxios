@@ -1,20 +1,39 @@
-var dstask = new ListTask();
+var taskService = new TaskService();
 var validator = new Validator();
+var isLoading = true;
 var getEle = function (id) {
   return document.getElementById(id);
 };
-var renderDSTask = function (dstask) {
+
+var getTasks = function () {
+  taskService
+    .getTaskApi()
+    .then(function (res) {
+      renderTable(res.data);
+      setLocalStorage(res.data);
+      isLoading = false;
+      checkLoading();
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
+};
+
+checkLoading();
+getTasks();
+
+var renderTable = function (taskService) {
   var todo = "";
   var completed = "";
-  dstask.forEach((task, index) => {
+  taskService.forEach((task) => {
     if (task.status == "todo") {
       todo += `<li>
-        <span>${task.name}</span>
+        <span>${task.textTask}</span>
         <div class="buttons">
-          <button class="remove" onclick="deleteToDo(${index})">
+          <button class="remove" onclick="deleteToDo(${task.id})">
             <i class="fa fa-trash-alt"></i>
           </button>
-          <button class="complete" onclick="changeStatus(${index})">
+          <button class="complete" onclick="changeStatus(${task.id})">
             <i class="far fa-check-circle"></i>
             <i class="fas fa-check-circle"></i>
           </button>
@@ -22,12 +41,12 @@ var renderDSTask = function (dstask) {
       </li>`;
     } else {
       completed += `<li>
-        <span>${task.name}</span>
+        <span>${task.textTask}</span>
         <div class="buttons">
-          <button class="remove" onclick="deleteToDo(${index})">
+          <button class="remove" onclick="deleteToDo(${task.id})">
             <i class="fa fa-trash-alt"></i>
           </button>
-          <button class="complete" onclick="changeStatus(${index})">
+          <button class="complete" onclick="changeStatus(${task.id})">
             <i class="far fa-check-circle"></i>
             <i class="fas fa-check-circle"></i>
           </button>
@@ -41,51 +60,81 @@ var renderDSTask = function (dstask) {
 
 getLocalStorage();
 
-function deleteToDo(index) {
-  dstask.deleteTask(index);
-  alert("Delete Success!");
-  renderDSTask(dstask.arr);
-  setLocalStorage();
+function deleteToDo(id) {
+  isLoading = true;
+  checkLoading();
+  taskService
+    .deleteTaskApi(id)
+    .then(function (res) {
+      getTasks();
+      renderTable(res.data);
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
 }
 
-function changeStatus(index) {
-  if (dstask.arr[index].status == "todo") {
-    dstask.arr[index].status = "completed";
-  } else {
-    dstask.arr[index].status = "completed";
-  }
-  alert("Change status success!");
-  renderDSTask(dstask.arr);
+function changeStatus(id) {
+  isLoading = true;
+  checkLoading();
+  var status = "";
+  taskService
+    .getTaskByIdApi(id)
+    .then(function (res) {
+      status = res.data.status == "todo" ? "completed" : "todo";
+      var task = new Task(res.data.textTask, status);
+      taskService
+        .updateTaskApi(id, task)
+        .then(function (res) {
+          getTasks();
+        })
+        .catch(function (err) {
+          console.log(err);
+        });
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
 }
 
 getEle("addItem").addEventListener("click", function () {
-  var nameTask = getEle("newTask").value;
+  var textTask = getEle("newTask").value;
+  var task = new Task(textTask, "todo");
+  var listTask = getLocalStorage();
   var isValid = true;
-  isValid &=
-    validator.checkEmpty(nameTask, "notiInput", "Task name cannot be empty!") &&
-    validator.checkSame(
-      nameTask,
-      dstask.arr,
-      "notiInput",
-      "Task name cannot be same!"
-    );
-  console.log(isValid);
-  if (!isValid) return;
-  var task = new Task(nameTask, "todo");
-  dstask.addTask(task);
-  setLocalStorage();
-  alert("add success!");
+  isValid &= validator.checkEmpty(textTask, "notiInput", "Task name is not empty") &&
+  validator.checkSame(textTask, listTask, "notiInput", "Task name is not same");
+  if(!isValid) return;
+  isLoading = true;
+  checkLoading();
+  taskService
+    .addTaskApi(task)
+    .then(function (res) {
+      getTasks();
+    })
+    .catch(function (err) {
+      console.log(err);
+    });
   getEle("newTask").value = "";
-  renderDSTask(dstask.arr);
 });
 
-function getLocalStorage() {
-  if (localStorage.getItem("DSTask")) {
-    dstask.arr = JSON.parse(localStorage.getItem("DSTask"));
-    renderDSTask(dstask.arr);
+function checkLoading() {
+  var content = `<div class="loader">Loading...</div>`;
+  if (isLoading) {
+    getEle("notiInput").style.display = "block";
+    getEle("notiInput").innerHTML = content;
+  } else {
+    getEle("notiInput").style.display = "none";
+    getEle("notiInput").innerHTML = "";
   }
 }
 
-function setLocalStorage() {
-  localStorage.setItem("DSTask", JSON.stringify(dstask.arr));
+function getLocalStorage() {
+  if (localStorage.getItem("listTask")) {
+    return JSON.parse(localStorage.getItem("listTask"));
+  }
+}
+
+function setLocalStorage(listTask) {
+  localStorage.setItem("listTask", JSON.stringify(listTask));
 }

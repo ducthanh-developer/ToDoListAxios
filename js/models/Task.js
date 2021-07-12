@@ -1,4 +1,4 @@
-function Task(_name, _status){
-    this.name = _name;
+function Task(_textTask, _status){
+    this.textTask = _textTask;
     this.status = _status;
 }
